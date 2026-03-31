@@ -12,10 +12,10 @@ dist
 dist-ssr
 *.local
 .env
+.gh-pages-worktree/
 
 # Editor directories and files
 serviceAccountKey.json
-scripts
 .vscode/*
 !.vscode/extensions.json
 .idea
