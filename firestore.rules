@@ -1,0 +1,84 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function hasActiveAccess(userId) {
+      return isOwner(userId)
+        && exists(/databases/$(database)/documents/users/$(userId))
+        && get(/databases/$(database)/documents/users/$(userId)).data.isActive == true;
+    }
+
+    function validRequiredString(value, maxLength) {
+      return value is string && value.size() > 0 && value.size() <= maxLength;
+    }
+
+    function validOptionalString(value, maxLength) {
+      return value == null || (value is string && value.size() <= maxLength);
+    }
+
+    function validDay(value) {
+      return value in [
+        'Lunes',
+        'Martes',
+        'Miercoles',
+        'Jueves',
+        'Viernes',
+        'Sabado'
+      ];
+    }
+
+    function validDistributorData() {
+      return request.resource.data.keys().hasOnly([
+          'nombre',
+          'telefono',
+          'diaSemana',
+          'createdAt',
+          'updatedAt'
+        ])
+        && validRequiredString(request.resource.data.nombre, 80)
+        && validOptionalString(request.resource.data.telefono, 25)
+        && validDay(request.resource.data.diaSemana);
+    }
+
+    function validProductData() {
+      return request.resource.data.keys().hasOnly([
+          'nombre',
+          'cantActual',
+          'cantDeseada',
+          'createdAt',
+          'updatedAt'
+        ])
+        && validRequiredString(request.resource.data.nombre, 80)
+        && request.resource.data.cantActual is int
+        && request.resource.data.cantActual >= 0
+        && request.resource.data.cantDeseada is int
+        && request.resource.data.cantDeseada >= 0;
+    }
+
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create, update, delete: if false;
+
+      match /distributors/{distributorId} {
+        allow get, list: if hasActiveAccess(userId);
+        allow create, update: if hasActiveAccess(userId) && validDistributorData();
+        allow delete: if hasActiveAccess(userId);
+
+        match /products/{productId} {
+          allow get, list: if hasActiveAccess(userId);
+          allow create, update: if hasActiveAccess(userId) && validProductData();
+          allow delete: if hasActiveAccess(userId);
+        }
+      }
+    }
+  }
+}

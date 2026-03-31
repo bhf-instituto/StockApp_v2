@@ -1,50 +1,35 @@
-import React, { useState } from "react";
-
-const logProductosFaltantes = (productosPorDistribuidor = {}, nombresDistribuidores = {}) => {
-  let mensaje = "Productos faltantes:\n\n";
-
-  Object.keys(productosPorDistribuidor).forEach((distribuidorId) => {
-    const distribuidor = nombresDistribuidores[distribuidorId];
-    if (!distribuidor) return;
-
-    const productosFaltantes = productosPorDistribuidor[distribuidorId]
-      .filter((producto) => producto.cantActual < producto.cantDeseada)
-      .map((producto) => `- ${producto.nombre} (${producto.cantDeseada - producto.cantActual})`)
-      .join("\n");
-
-    if (productosFaltantes) {
-      mensaje += `${distribuidor.nombre}:\n${productosFaltantes}\n\n`;
-    }
-  });
-
-  if (mensaje === "Productos faltantes:\n\n") {
-    alert("No hay productos faltantes.");
-    return;
-  }
-
-  navigator.clipboard.writeText(mensaje)
-    .then(() => "")
-    .catch((err) => console.error("Error al copiar", err));
-};
+import { useState } from "react";
+import { buildGlobalOrderText } from "../utils/orderMessages";
 
 const BotonCopiarLista = ({ productosPorDistribuidor, nombresDistribuidores }) => {
   const [botonTexto, setBotonTexto] = useState("Copiar Lista");
 
-  const handleClick = () => {
-    // Cambiar el texto a "Copiado"
-    setBotonTexto("Copiado");
+  const handleClick = async () => {
+    const mensaje = buildGlobalOrderText(
+      productosPorDistribuidor,
+      nombresDistribuidores
+    );
 
-    // Llamar a la función de copiar la lista
-    logProductosFaltantes(productosPorDistribuidor, nombresDistribuidores);
+    if (!mensaje) {
+      window.alert("No hay productos faltantes.");
+      return;
+    }
 
-    // Volver a cambiar el texto a "Copiar Lista" después de 1 segundo
-    setTimeout(() => {
+    try {
+      await navigator.clipboard.writeText(mensaje);
+      setBotonTexto("Copiado");
+      window.setTimeout(() => {
+        setBotonTexto("Copiar Lista");
+      }, 1000);
+    } catch (error) {
+      console.error("Error al copiar la lista completa.", error);
+      window.alert("No pudimos copiar la lista.");
       setBotonTexto("Copiar Lista");
-    }, 1000);
+    }
   };
 
   return (
-    <button className="btn" onClick={handleClick}>
+    <button type="button" className="btn" onClick={handleClick}>
       {botonTexto}
     </button>
   );

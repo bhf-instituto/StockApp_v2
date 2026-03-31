@@ -1,36 +1,46 @@
 import { useState } from "react";
+import { buildDistributorOrderText } from "../utils/orderMessages";
 
-const BotonCopiar = ({ distribuidorId, productosPorDistribuidor, nombresDistribuidores }) => {
+const BotonCopiar = ({
+  distribuidorId,
+  productosPorDistribuidor,
+  nombresDistribuidores,
+}) => {
   const [textoBoton, setTextoBoton] = useState("Copiar");
 
-  const copiarPedidoPorDistribuidor = (distribuidorId, productosPorDistribuidor, nombresDistribuidores) => {
+  const copiarPedidoPorDistribuidor = async () => {
     const distribuidor = nombresDistribuidores[distribuidorId];
-    if (!distribuidor) return;
 
-    const productosFaltantes = productosPorDistribuidor[distribuidorId]
-      .filter((producto) => producto.cantActual < producto.cantDeseada)
-      .map((producto) => `- ${producto.nombre} ${producto.cantDeseada - producto.cantActual}`)
-      .join("\n");
+    if (!distribuidor) {
+      return;
+    }
 
-    navigator.clipboard.writeText(productosFaltantes)
-      .then(() => {
-        setTextoBoton("Copiado");
-        setTimeout(() => setTextoBoton("Copiar"), 1000); // Vuelve a "copiar" después de 2 segundos
-      })
-      .catch(() => {
-        alert("Error al copiar");
-      });
+    const productosFaltantes = buildDistributorOrderText(
+      distribuidor,
+      productosPorDistribuidor[distribuidorId]
+    );
 
     if (!productosFaltantes) {
-      alert("No hay productos faltantes para este distribuidor.");
+      window.alert("No hay productos faltantes para este distribuidor.");
       return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(productosFaltantes);
+      setTextoBoton("Copiado");
+      window.setTimeout(() => setTextoBoton("Copiar"), 1000);
+    } catch (error) {
+      console.error("Error al copiar el pedido.", error);
+      window.alert("Error al copiar el pedido.");
     }
   };
 
   return (
-    <button className="btn copy-distri" onClick={() => copiarPedidoPorDistribuidor(
-      distribuidorId, productosPorDistribuidor, nombresDistribuidores
-    )}>
+    <button
+      type="button"
+      className="btn copy-distri"
+      onClick={copiarPedidoPorDistribuidor}
+    >
       {textoBoton}
     </button>
   );

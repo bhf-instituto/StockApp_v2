@@ -1,41 +1,104 @@
-import React, { useState, useEffect, useLayoutEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { onAuthStateChanged, signOut } from "firebase/auth";
+import gsap from "gsap";
 import Login from "./components/Login";
 import Distribuidores from "./components/Distribuidores";
 import Productos from "./components/Productos";
-import { auth } from "./js/firebaseConfig";
-import { signOut } from "firebase/auth";
-import gsap from "gsap";
+import { auth } from "./firebase/client";
+import { getUserProfile, hasActiveAccess } from "./services/userProfiles";
+
+const DEFAULT_SECTION = "distribuidores";
 
 function App() {
-  const [user, setUser] = useState(null);
-  const [seccion, setSeccion] = useState("distribuidores");
-  const prevSeccion = useRef("distribuidores");
+  const [session, setSession] = useState(null);
+  const [seccion, setSeccion] = useState(DEFAULT_SECTION);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [authNotice, setAuthNotice] = useState("");
+  const prevSeccion = useRef(DEFAULT_SECTION);
   const distribuidoresRef = useRef(null);
   const productosRef = useRef(null);
+  const touchStartRef = useRef(null);
+  const touchEndRef = useRef(null);
+
+  const user = session?.authUser ?? null;
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
+      if (!isMounted) {
+        return;
+      }
+
+      if (!authUser) {
+        setSession(null);
+        setIsCheckingAuth(false);
+        return;
+      }
+
+      setIsCheckingAuth(true);
+
+      try {
+        const profile = await getUserProfile(authUser.uid);
+
+        if (!hasActiveAccess(profile)) {
+          setAuthNotice(
+            "Tu cuenta existe, pero todavia no fue habilitada para usar esta version."
+          );
+          setSession(null);
+          await signOut(auth);
+          return;
+        }
+
+        if (!isMounted) {
+          return;
+        }
+
+        setSession({ authUser, profile });
+        setAuthNotice("");
+      } catch (error) {
+        console.error("No se pudo validar el acceso del usuario.", error);
+        setAuthNotice(
+          "No pudimos validar tu acceso en este momento. Intenta nuevamente."
+        );
+        setSession(null);
+        await signOut(auth).catch(() => {});
+      } finally {
+        if (isMounted) {
+          setIsCheckingAuth(false);
+        }
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
+  }, []);
 
   const handleLogout = async () => {
     await signOut(auth);
-    setUser(null);
   };
 
-  // Establecer siempre la sección a "distribuidores" cuando el usuario se loguee
   useEffect(() => {
     if (user) {
-      setSeccion("distribuidores");
+      setSeccion(DEFAULT_SECTION);
     }
   }, [user]);
 
   useLayoutEffect(() => {
-    if (!user) return; // Si no hay usuario, no ejecuta la animación
+    if (!user) {
+      return;
+    }
 
-    // Configurar las secciones al inicio
     gsap.set(distribuidoresRef.current, { xPercent: 0, opacity: 1, zIndex: 2 });
     gsap.set(productosRef.current, { xPercent: 100, opacity: 0, zIndex: 1 });
-  }, [user]); // Se ejecuta cuando el usuario cambia
+  }, [user]);
 
   useLayoutEffect(() => {
-    // Evitar ejecutar la animación si la sección no cambia
-    if (prevSeccion.current === seccion) return;
+    if (prevSeccion.current === seccion) {
+      return;
+    }
 
     const nuevaSeccion =
       seccion === "distribuidores"
@@ -45,7 +108,6 @@ function App() {
       prevSeccion.current === "distribuidores"
         ? distribuidoresRef.current
         : productosRef.current;
-
     const direction = seccion === "distribuidores" ? -200 : 100;
 
     gsap.set([distribuidoresRef.current, productosRef.current], {
@@ -55,14 +117,12 @@ function App() {
       width: "100%",
     });
 
-    // Animación de la nueva sección
     gsap.fromTo(
       nuevaSeccion,
       { xPercent: direction, opacity: 1, zIndex: 2, ease: "none" },
       { xPercent: 0, opacity: 1, duration: 0.5, ease: "none" }
     );
 
-    // Animación de la sección anterior
     gsap.to(seccionAnterior, {
       xPercent: direction * -1,
       opacity: 0,
@@ -71,38 +131,49 @@ function App() {
       ease: "none",
     });
 
-    prevSeccion.current = seccion; // Actualizamos la referencia de la sección actual
-  }, [seccion]); // Esta lógica se ejecuta cada vez que se cambia la sección
+    prevSeccion.current = seccion;
+  }, [seccion]);
 
-  // Gestos touch para cambiar de sección (solo cuando hay usuario)
-  const touchStartRef = useRef(null);
-  const touchEndRef = useRef(null);
-
-  const handleTouchStart = (e) => {
-    touchStartRef.current = e.changedTouches[0].clientX;
+  const handleTouchStart = (event) => {
+    touchStartRef.current = event.changedTouches[0].clientX;
   };
 
-  const handleTouchEnd = (e) => {
-    touchEndRef.current = e.changedTouches[0].clientX;
+  const handleTouchEnd = (event) => {
+    touchEndRef.current = event.changedTouches[0].clientX;
 
     if (touchStartRef.current - touchEndRef.current > 50) {
-      // Deslizar de derecha a izquierda
       if (seccion !== "productos") {
         setSeccion("productos");
       }
     } else if (touchEndRef.current - touchStartRef.current > 50) {
-      // Deslizar de izquierda a derecha
       if (seccion !== "distribuidores") {
         setSeccion("distribuidores");
       }
     }
   };
 
+  if (isCheckingAuth) {
+    return (
+      <section className="page-container">
+        <div className="main-container container-fluid">
+          <div className="section section-login login-container">
+            <form>
+              <h2 className="h2-title mb-3">StockApp v2</h2>
+              <p className="text-center text-secondary mb-0">
+                Verificando acceso...
+              </p>
+            </form>
+          </div>
+          <div className="background"></div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="page-container">
       <div
-        className={"main-container container-fluid"}
-        // Solo activar los gestos cuando haya un usuario logueado
+        className="main-container container-fluid"
         onTouchStart={user ? handleTouchStart : null}
         onTouchEnd={user ? handleTouchEnd : null}
       >
@@ -110,24 +181,23 @@ function App() {
           <>
             <div className="btn-group btn-group-nav w-100">
               <button
-                className={`btn ${
-                  seccion === "distribuidores" ? "active" : ""
-                }`}
+                type="button"
+                className={`btn ${seccion === "distribuidores" ? "active" : ""}`}
                 onClick={() =>
                   seccion !== "distribuidores" && setSeccion("distribuidores")
                 }
               >
-                Creación
+                Creacion
               </button>
               <button
+                type="button"
                 className={`btn ${seccion === "productos" ? "active" : ""}`}
-                onClick={() =>
-                  seccion !== "productos" && setSeccion("productos")
-                }
+                onClick={() => seccion !== "productos" && setSeccion("productos")}
               >
                 Listas
               </button>
               <button
+                type="button"
                 className="btn btn-danger btn-danger-nav"
                 onClick={handleLogout}
               >
@@ -148,7 +218,10 @@ function App() {
             </div>
           </>
         ) : (
-          <Login setUser={setUser} user={user} />
+          <Login
+            statusMessage={authNotice}
+            onClearStatusMessage={() => setAuthNotice("")}
+          />
         )}
         <div className="background"></div>
       </div>
