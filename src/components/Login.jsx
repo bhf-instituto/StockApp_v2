@@ -43,6 +43,7 @@ const Login = ({ statusMessage, onClearStatusMessage }) => {
 
   return (
     <div className="section section-login login-container">
+      <h1>holaloco</h1>
       <form onSubmit={handleSubmit}>
         <h2 className="h2-title mb-4">StockApp</h2>
         <div className="input-group mb-2">
