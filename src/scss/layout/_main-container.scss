@@ -2,17 +2,22 @@
 @use "../abstract/mixins" as *;
 
 .page-container{
-  width: 100vw;
-  height: 100vh;
+  width: 100%;
+  min-height: 100svh;
   overflow-x: hidden;
+  display: flex;
+  justify-content: center;
+  background: transparent;
 }
 .main-container {
+  width: 100%;
   min-height: 100svh;
   height: auto;
-  background-color: transparent;
-  // overflow-x: hidden;
-  // overflow-y: visible;
-  
+  margin: 0;
+  padding-inline: 0;
+  background: linear-gradient(180deg, $gray-1000 0%, $gray-900 100%);
+  position: relative;
+  overflow: hidden;
 }
 
 
