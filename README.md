@@ -2,6 +2,17 @@
 
 Aplicacion web para control de stock orientada a pequenos negocios y emprendimientos. Esta version fue replanteada desde cero con autenticacion cerrada, aislamiento de datos por usuario en Firestore y una interfaz pensada para uso mobile.
 
+## Tipo de arquitectura
+
+Este proyecto no utiliza un backend tradicional con API propia en `Node.js` o `Express`. La aplicacion funciona con una arquitectura `full stack` basada en servicios serverless de Firebase:
+
+- `React` para la interfaz
+- `Firebase Authentication` para autenticacion
+- `Cloud Firestore` para persistencia de datos
+- `Firestore Rules` para autorizacion y seguridad
+
+En otras palabras, la app tiene backend real, pero resuelto mediante infraestructura gestionada de Firebase en lugar de una API custom.
+
 ## Caracteristicas principales
 
 - autenticacion con `Firebase Authentication` usando usuarios creados manualmente
@@ -33,6 +44,8 @@ Esta app puede publicarse como sitio estatico y seguir funcionando conectada a F
 - reglas de Firestore
 - separacion de datos por `uid`
 - validacion de usuarios activos
+
+Aunque el deploy sea estatico, el backend sigue existiendo a traves de Firebase Authentication y Cloud Firestore.
 
 ## Arquitectura de datos
 
