@@ -4,6 +4,11 @@ import Modal from "./Modal";
 import { auth } from "../firebase/client";
 import { getAuthErrorMessage } from "../utils/authErrors";
 
+const DEMO_LOGIN_PARAM = "demo";
+const DEMO_LOGIN_VALUE = "1";
+const DEMO_EMAIL = "test@test.com";
+const DEMO_PASSWORD = "12345678";
+
 const Login = ({ statusMessage, onClearStatusMessage }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -17,6 +22,18 @@ const Login = ({ statusMessage, onClearStatusMessage }) => {
       setIsModalOpen(true);
     }
   }, [statusMessage]);
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+
+    if (searchParams.get(DEMO_LOGIN_PARAM) !== DEMO_LOGIN_VALUE) {
+      return;
+    }
+
+    setEmail(DEMO_EMAIL);
+    setPassword(DEMO_PASSWORD);
+    window.history.replaceState({}, "", window.location.pathname + window.location.hash);
+  }, []);
 
   const closeModal = () => {
     setIsModalOpen(false);
@@ -43,7 +60,6 @@ const Login = ({ statusMessage, onClearStatusMessage }) => {
 
   return (
     <div className="section section-login login-container">
-      <h1>holaloco</h1>
       <form onSubmit={handleSubmit}>
         <h2 className="h2-title mb-4">StockApp</h2>
         <div className="input-group mb-2">

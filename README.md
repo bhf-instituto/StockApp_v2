@@ -47,6 +47,27 @@ Esta app puede publicarse como sitio estatico y seguir funcionando conectada a F
 
 Aunque el deploy sea estatico, el backend sigue existiendo a traves de Firebase Authentication y Cloud Firestore.
 
+### Acceso demo desde portfolio
+
+Si queres enlazar esta app desde tu portfolio con los datos de prueba ya cargados en el formulario de login, podes apuntar al deploy con el parametro:
+
+```text
+?demo=1
+```
+
+Ejemplo:
+
+```text
+https://tu-dominio-o-gh-pages/?demo=1
+```
+
+Con ese flag, la pantalla de login precarga:
+
+- email: `test@test.com`
+- password: `12345678`
+
+La app solo completa los campos. El acceso real sigue dependiendo de que ese usuario exista en `Firebase Authentication` y tenga su perfil activo en Firestore.
+
 ## Arquitectura de datos
 
 Cada usuario autenticado trabaja dentro de su propio espacio en Firestore:
